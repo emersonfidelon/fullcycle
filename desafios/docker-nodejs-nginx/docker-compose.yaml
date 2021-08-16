@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  nginx:
+    build: 
+      context: ./nginx
+    container_name: nginx
+    restart: always
+    ports: 
+      - "8080:80"
+    depends_on: 
+      - node
+    networks: 
+      - node-network
+  
+  node:
+    container_name: node
+    restart: always
+    build: ./nodejs
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh
+    depends_on: 
+      - db
+    networks:
+      - node-network
+    volumes: 
+      - ./nodejs:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm start
+
+  db:
+    build: 
+      context: ./mysql
+    container_name: db
+    restart: always
+    tty: true
+    networks: 
+      - node-network
+    volumes:
+      - ./mysql/base:/var/lib/mysql
+    environment: 
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: "nodedb"
+
+networks: 
+  node-network:
+    driver: bridge
